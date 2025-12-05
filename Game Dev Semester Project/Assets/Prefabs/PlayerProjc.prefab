@@ -152,4 +152,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13103c430d5ceb34587ffd85b37bbc95, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProjectileHandler
-  damage: 10
+  damage: 1

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class Boss1 : BossBase
@@ -6,14 +7,7 @@ public class Boss1 : BossBase
     public Transform projectileSpawnCenter;
     private float rotationOffset = 0f;
 
-    void Start()
-    {
-        if (controller != null)
-        {
-            Init(controller);
-
-        }
-    }
+    public float basePlayerRadius = 2f;
 
     public override void CheckToFire(ref float nextShootTime)
     {
@@ -61,15 +55,16 @@ public class Boss1 : BossBase
         switch (phaseNumber)
         {
             case 1:
-                controller.shootInterval = 1f;
+                controller.shootInterval = 2f;
                 controller.projectileSpeed = 8f;
                 break;
             case 2:
-                controller.shootInterval = .5f;
+                controller.shootInterval = 2f;
                 controller.projectileSpeed = 10f;
                 break;
             case 3:
-                controller.shootInterval = .6f;
+                //*****NOT FINSIHED*****
+                controller.shootInterval = .1f;
                 controller.projectileSpeed = 8f;
                 break;
         }
@@ -78,6 +73,24 @@ public class Boss1 : BossBase
     {
         controller.hasPhaseChanged = true;
         Debug.Log($"Boss entered Charm Phase {phaseNumber}");
+
+        switch (phaseNumber)
+        {
+            case 1:
+                controller.shootInterval = 3f;
+                controller.projectileSpeed = 8f;
+                break;
+            case 2:
+                //*****NOT FINSIHED*****
+                controller.shootInterval = .1f;
+                controller.projectileSpeed = 8f;
+                break;
+            case 3:
+                //*****NOT FINSIHED*****
+                controller.shootInterval = .1f;
+                controller.projectileSpeed = 8f;
+                break;
+        }
     }
 
     //Base Phase Code
@@ -92,40 +105,40 @@ public class Boss1 : BossBase
     //Phase 2
     void Phase2Attack()
     {
-        int projectileCount = 16;
-        rotationOffset = (rotationOffset + 20f) % 360f;
-        FireCurvedCircle(projectileCount, projectile1Prefab, rotationOffset);
+        int projectileCount = 10;
+        DelayedTargetedRingAttack(projectileCount, 5f, 12f, 1.5f);
     }
 
     //Phase 3
 
     void Phase3Attack()
     {
-        int projectileCount = 32;
-        rotationOffset = (rotationOffset + 10f) % 360f;
-        FireCurvedCircle(projectileCount, projectile1Prefab, rotationOffset, 10f);
-        ReverseCurvedCircle(projectileCount, projectile1Prefab, rotationOffset, 10f);
+        //*****NOT FINSIHED*****
+        int projectileCount = 2;
+        rotationOffset = (rotationOffset + 20f) % 360f;
+        FireCircle(projectileCount, projectile1Prefab, rotationOffset);
     }
     //End Base Phase Code
 
     //Charm Phase Code
     void CharmPhase1Attack()
     {
-        int projectileCount = 2;
-        rotationOffset = (rotationOffset + 20f) % 360f;
-        FireCircle(projectileCount,projectile1Prefab, rotationOffset);
+        FireSequentialLineShapes(5, 4, 5, 0.5f);
     }
     void CharmPhase2Attack()
     {
+        //*****NOT FINSIHED*****
         int projectileCount = 2;
         rotationOffset = (rotationOffset + 20f) % 360f;
-        FireCircle(projectileCount,projectile1Prefab, rotationOffset);
+        FireCircle(projectileCount, projectile1Prefab, rotationOffset);
+
     }
     void CharmPhase3Attack()
     {
+        //*****NOT FINSIHED*****
         int projectileCount = 2;
         rotationOffset = (rotationOffset + 20f) % 360f;
-        FireCircle(projectileCount,projectile1Prefab, rotationOffset);
+        FireCircle(projectileCount, projectile1Prefab, rotationOffset);
     }
 
     //End Charm Phase Code
@@ -143,70 +156,93 @@ public class Boss1 : BossBase
             if (rb != null)
                 rb.linearVelocity = dir * controller.projectileSpeed;
 
-            Destroy(proj, 10f); // lifetime
+            Destroy(proj, 7f);
         }
     }
-    void FireCurvedCircle(int projectileCount, GameObject prefab, float angleOffset = 0f, float curveStrength = 50f)
+
+    public void FireSequentialLineShapes(int row1Count, int row2Count, int row3Count, float delayBetweenRows = 0.1f)
     {
+        Vector3 initialPos = (controller.playerSpawnRef.position - projectileSpawnCenter.position).normalized;
+        StartCoroutine(FireSequentialLineShapesRoutine(row1Count, row2Count, row3Count, delayBetweenRows, initialPos));
+    }
+
+    IEnumerator FireSequentialLineShapesRoutine(int row1Count, int row2Count, int row3Count, float delay, Vector3 initialPos)
+    {
+        FireLineRow(row1Count, initialPos);
+        yield return new WaitForSeconds(delay);
+
+        FireLineRow(row2Count, initialPos);
+        yield return new WaitForSeconds(delay);
+
+        FireLineRow(row3Count, initialPos);
+    }
+
+    void FireLineRow(int projectileCount, Vector3 initialPos)
+    {
+        Vector3 perpendicular = Vector3.Cross(initialPos, Vector3.up).normalized;
+
+        float spacing = 2f;
+
         for (int i = 0; i < projectileCount; i++)
         {
-            float angle = (360f / projectileCount) * i + angleOffset;
-            Vector3 dir = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad), 0f, Mathf.Sin(angle * Mathf.Deg2Rad));
+            float offset = (i - (projectileCount - 1) / 2f) * spacing;
 
-            GameObject proj = Instantiate(prefab, projectileSpawnCenter.position, Quaternion.identity);
+            Vector3 spawnPos = projectileSpawnCenter.position + perpendicular * offset;
 
-            // Start moving the projectile with a curve
-            StartCoroutine(MoveCurvedProjectile(proj, dir, controller.projectileSpeed, curveStrength));
+            GameObject proj = Instantiate(projectile1Prefab, spawnPos, Quaternion.identity);
 
-            Destroy(proj, 10f); // lifetime
-        }
-    }
-    System.Collections.IEnumerator MoveCurvedProjectile(GameObject proj, Vector3 direction, float speed, float curveStrength)
-    {
-        float angle = 0f;
+            Rigidbody rb = proj.GetComponent<Rigidbody>();
+            if (rb != null)
+                rb.linearVelocity = initialPos * controller.projectileSpeed;
 
-        while (proj != null)
-        {
-            // Curve the direction over time
-            angle += curveStrength * Time.deltaTime;
-            Vector3 curvedDir = Quaternion.Euler(0, angle, 0) * direction;
-
-            // Move in the new direction
-            proj.transform.position += curvedDir * speed * Time.deltaTime;
-
-            yield return null;
+            Destroy(proj, 7f);
         }
     }
 
-    void ReverseCurvedCircle(int projectileCount, GameObject prefab, float angleOffset = 0f, float curveStrength = 50f)
+    void DelayedTargetedRingAttack(int projectileCount, float outwardSpeed, float travelSpeed, float delay)
     {
+        StartCoroutine(DelayedTargetedRingRoutine(projectileCount, outwardSpeed, travelSpeed, delay));
+    }
+
+    IEnumerator DelayedTargetedRingRoutine(int projectileCount, float outwardSpeed, float travelSpeed, float delay)
+    {
+        GameObject[] projectiles = new GameObject[projectileCount];
+        Vector3 bossPos = projectileSpawnCenter.position;
+
         for (int i = 0; i < projectileCount; i++)
         {
-            float angle = (360f / projectileCount) * i - angleOffset;
-            Vector3 dir = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad), 0f, Mathf.Sin(angle * Mathf.Deg2Rad));
+            float angle = (360f / projectileCount) * i;
+            float rad = angle * Mathf.Deg2Rad;
 
-            GameObject proj = Instantiate(prefab, projectileSpawnCenter.position, Quaternion.identity);
+            Vector3 dir = new Vector3(Mathf.Cos(rad), 0f, Mathf.Sin(rad));
 
-            // Start moving the projectile with a curve
-            StartCoroutine(ReversedMoveCurvedProjectile(proj, dir, controller.projectileSpeed, curveStrength));
+            GameObject proj = Instantiate(projectile1Prefab, bossPos, Quaternion.identity);
+            projectiles[i] = proj;
 
-            Destroy(proj, 10f); // lifetime
+            Rigidbody rb = proj.GetComponent<Rigidbody>();
+            if (rb != null)
+                rb.linearVelocity = dir * outwardSpeed;
         }
-    }
-    System.Collections.IEnumerator ReversedMoveCurvedProjectile(GameObject proj, Vector3 direction, float speed, float curveStrength)
-    {
-        float angle = 0f;
 
-        while (proj != null)
+        yield return new WaitForSeconds(delay);
+
+        Vector3 currentPlayerPos = controller.playerSpawnRef.position;
+
+        foreach (GameObject proj in projectiles)
         {
-            // Curve the direction over time
-            angle -= curveStrength * Time.deltaTime;
-            Vector3 curvedDir = Quaternion.Euler(0, angle, 0) * direction;
+            if (proj == null) continue;
 
-            // Move in the new direction
-            proj.transform.position += curvedDir * speed * Time.deltaTime;
+            Rigidbody rb = proj.GetComponent<Rigidbody>();
+            if (rb == null) continue;
 
-            yield return null;
+            Vector3 dir = (currentPlayerPos - proj.transform.position).normalized;
+            rb.linearVelocity = dir * travelSpeed;
         }
+
+        foreach (GameObject proj in projectiles)
+            if (proj != null)
+                Destroy(proj, 8f);
     }
+
+
 }

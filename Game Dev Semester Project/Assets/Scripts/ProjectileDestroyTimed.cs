@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class ProjectileLifetime : MonoBehaviour
 {
-    public float lifetime = 7f; // set per projectile type
+    public float lifetime = 99f;
 
     void Start()
     {
